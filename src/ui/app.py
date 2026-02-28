@@ -111,6 +111,18 @@ if start_button:
 
     st.success("🎉 Audit terminé par Claude avec succès !")
     
+    if state_data.get("stitch_ui_result"):
+        st.markdown("---")
+        st.header("✨ Cockpit Web Premium (Google Stitch)")
+        res = state_data["stitch_ui_result"]
+        if res["status"] == "success":
+            st.balloons()
+            st.success(f"Dashboard généré : **{res.get('ui_url', 'Lien non disponible')}**")
+            st.markdown(f"> {res['message']}")
+            st.button("🔗 Ouvrir le Cockpit Stitch (Simulation)")
+        else:
+            st.error(f"Erreur Stitch : {res['message']}")
+
     st.markdown("---")
     st.subheader("Livrable : Executive Summary")
     st.info(state_data.get("exec_summary", "Non généré"))
