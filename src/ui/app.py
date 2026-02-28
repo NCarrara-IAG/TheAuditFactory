@@ -68,47 +68,64 @@ if start_button:
     def update_ui(phase_name, progress, current_state):
         logs.append(f"✅ **Phase atteinte:** {phase_name}")
         console_container.markdown("\n\n".join(logs))
-        state_container.json(current_state)
+        
+        # Convert Pydantic objects to dicts for JSON display
+        display_state = {}
+        for k, v in current_state.items():
+            if isinstance(v, list):
+                display_state[k] = [item.model_dump() if hasattr(item, "model_dump") else item for item in v]
+            elif hasattr(v, "model_dump"):
+                display_state[k] = v.model_dump()
+            else:
+                display_state[k] = v
+                
+        state_container.json(display_state)
         progress_bar.progress(progress)
         status_text.text(f"Exécution : {phase_name}...")
-        time.sleep(1.5) # Fake delay for visual effect
+        # time.sleep(0.5) # Reduced delay for real AI calls
 
     logs.append(f"🚀 Démarrage du pipeline pour {audit_type}...")
     console_container.markdown("\n\n".join(logs))
-    time.sleep(1)
 
     # Run the graph
     step_count = 0
-    total_steps = 7 # Approximate nodes in our graph
+    total_steps = 7
 
     for event in audit_graph.stream(initial_state):
         for node_name, state_data in event.items():
             step_count += 1
             progress = min(step_count / total_steps, 1.0)
             
-            # Sub-agent mock injection
+            # Sub-agent real injection
             if node_name == "plugin_agents":
-                st.toast(f"🔌 Agent Plugin activé pour {audit_type}", icon="🤖")
-                logs.append("🤖 *Agent IA Readiness* en cours d'analyse...")
+                st.toast(f"🤖 Claude Agent Spécialisé activé", icon="🤖")
+                logs.append("🤖 *Agent IA Readiness* (Claude) analyse le contexte...")
                 agent = IAReadinessAgent()
                 plugin_result = agent.analyze(state_data["client_context"])
                 state_data["findings"].extend(plugin_result["findings"])
                 
             if node_name == "validation":
-                st.warning("Validation Humaine requise. (Auto-approuvé pour la démo)")
+                st.warning("Validation Humaine requise. (Auto-approuvé)")
                 
             update_ui(state_data["current_phase"], progress, state_data)
 
-    st.success("🎉 Audit terminé avec succès !")
+    st.success("🎉 Audit terminé par Claude avec succès !")
     
     st.markdown("---")
     st.subheader("Livrable : Executive Summary")
     st.info(state_data.get("exec_summary", "Non généré"))
     
     if state_data.get("findings"):
-        st.subheader("Découvertes Principales (Findings)")
-        st.table([{
-            "Sévérité": f["severity"],
-            "Catégorie": f["category"],
-            "Description": f["description"]
-        } for f in state_data["findings"]])
+        st.subheader("Découvertes Principales (Findings générés par Claude)")
+        display_findings = []
+        for f in state_data["findings"]:
+            if hasattr(f, "model_dump"):
+                f_dict = f.model_dump()
+            else:
+                f_dict = f
+            display_findings.append({
+                "Sévérité": f_dict.get("severity"),
+                "Catégorie": f_dict.get("category"),
+                "Description": f_dict.get("description")
+            })
+        st.table(display_findings)
